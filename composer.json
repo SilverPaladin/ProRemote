@@ -1,0 +1,5 @@
+{
+    "require-dev": {
+        "phpacker/phpacker": "^0.6.4"
+    }
+}
