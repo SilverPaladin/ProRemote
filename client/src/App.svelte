@@ -12,6 +12,37 @@
   let showSettings = false;
   let connected = false;
   let version = '';
+  let wakeLock = null;
+
+  async function acquireWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch {
+      // Permission denied, page hidden, or unsupported — silently ignore.
+    }
+  }
+
+  async function releaseWakeLock() {
+    try { await wakeLock?.release(); } catch {}
+    wakeLock = null;
+  }
+
+  function onFullscreenChange() {
+    if (document.fullscreenElement) {
+      acquireWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+  }
+
+  function onVisibilityChange() {
+    // Wake lock is auto-released when tab is hidden — reacquire when visible & still fullscreen.
+    if (document.visibilityState === 'visible' && document.fullscreenElement && !wakeLock) {
+      acquireWakeLock();
+    }
+  }
 
   async function testConnection() {
     status.set({ kind: 'loading', message: 'Connecting…' });
@@ -53,14 +84,17 @@
   }
 </script>
 
-<svelte:window on:keydown={onKey} />
+<svelte:window
+  on:keydown={onKey}
+  on:fullscreenchange={onFullscreenChange}
+  on:visibilitychange={onVisibilityChange}
+/>
 
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">PP</div>
       <div>
-        <div class="title">ProPresenter Remote</div>
+        <div class="title">Pro Remote</div>
         <div class="sub muted">
           {#if connected}
             <span class="dot ok"></span> {$settings.host}:{$settings.port} {version ? `· ${version}` : ''}

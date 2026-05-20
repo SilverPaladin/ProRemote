@@ -14,7 +14,7 @@ const defaultHost =
 
 const defaults = {
   host: defaultHost,
-  port: '50627',
+  port: '50001',
   https: false
 };
 

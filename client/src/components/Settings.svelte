@@ -7,12 +7,27 @@
   let host = $settings.host;
   let port = $settings.port;
   let https = $settings.https;
+  let isFullscreen = !!document.fullscreenElement;
+
+  function onFullscreenChange() {
+    isFullscreen = !!document.fullscreenElement;
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }
 
   function save() {
     settings.set({ host: host.trim(), port: String(port).trim(), https: !!https });
     dispatch('saved');
   }
 </script>
+
+<svelte:window on:fullscreenchange={onFullscreenChange} />
 
 <div
   class="backdrop"
@@ -48,6 +63,12 @@
       <input type="checkbox" bind:checked={https} />
       <span>Use HTTPS</span>
     </label>
+
+    <div class="fs-row">
+      <button type="button" class="fs-btn" on:click={toggleFullscreen}>
+        {isFullscreen ? 'Exit Full Screen' : 'Go Full Screen'}
+      </button>
+    </div>
 
     <div class="hint muted">
       <strong>Note:</strong> if you see CORS errors, enable
@@ -88,4 +109,10 @@
   label.row { flex-direction: row; align-items: center; color: var(--text); }
   label.row input { width: auto; }
   .hint { font-size: 12px; line-height: 1.5; }
+  .fs-row { display: flex; }
+  .fs-btn {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
 </style>

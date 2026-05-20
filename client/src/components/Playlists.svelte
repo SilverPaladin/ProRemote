@@ -14,15 +14,42 @@
 
   // Highlight whichever item matches the currently loaded presentation,
   // including when navigation auto-advances to the next presentation.
+  // We prefer matching by item index (kept in sync by sync.js / loadItem),
+  // which lets us highlight the active row even when no slide has been
+  // selected yet and works for any row type (header, presentation, etc.).
   $: activeUuid = $currentPresentation?.uuid || null;
+  $: activeItemIdx = $currentItemIndex;
+
+  // When a playlist is the "active" one (its items are loaded into the
+  // navigation context), keep it expanded so the user can always see where
+  // they are in the playlist. We also auto-fetch its items if needed.
+  $: activePlaylistKey = $currentPlaylistId || null;
+  $: if (activePlaylistKey) {
+    if (!expanded[activePlaylistKey]) {
+      expanded = { ...expanded, [activePlaylistKey]: true };
+    }
+    if (!itemsByPlaylist[activePlaylistKey]) {
+      fetchItems(activePlaylistKey);
+    }
+  }
+
+  async function fetchItems(key) {
+    try {
+      const res = await api.playlist(key);
+      const items = Array.isArray(res) ? res : (res?.items || res?.data || []);
+      itemsByPlaylist = { ...itemsByPlaylist, [key]: items };
+    } catch (e) {
+      dispatch('error', e.message);
+    }
+  }
 
   let listEl;
 
   // Whenever the active presentation or the rendered items change, ensure the
   // highlighted item is visible inside the playlist scroll area.
-  $: scrollActiveIntoView(activeUuid, itemsByPlaylist, expanded);
+  $: scrollActiveIntoView(activeUuid, activeItemIdx, itemsByPlaylist, expanded);
 
-  async function scrollActiveIntoView(_uuid, _items, _exp) {
+  async function scrollActiveIntoView(_uuid, _idx, _items, _exp) {
     if (!listEl) return;
     await tick();
     const el = listEl.querySelector('.item.active');
@@ -57,6 +84,12 @@
 
   async function toggle(pl) {
     const key = idOf(pl);
+    // The active playlist stays pinned open so the user can always see where
+    // they are in it. Clicking its header is a no-op.
+    if (key === activePlaylistKey) {
+      expanded = { ...expanded, [key]: true };
+      return;
+    }
     expanded[key] = !expanded[key];
     expanded = { ...expanded };
     if (expanded[key] && !itemsByPlaylist[key]) {
@@ -129,8 +162,13 @@
   {#each playlists as pl (idOf(pl))}
     {@const key = idOf(pl)}
     <div class="pl">
-      <button class="pl-head" on:click={() => toggle(pl)}>
-        <span class="chev">{expanded[key] ? '▾' : '▸'}</span>
+      <button
+        class="pl-head"
+        class:active={key === activePlaylistKey}
+        on:click={() => toggle(pl)}
+        title={key === activePlaylistKey ? 'Active playlist (always expanded)' : ''}
+      >
+        <span class="chev">{(expanded[key] || key === activePlaylistKey) ? '▾' : '▸'}</span>
         <span class="pl-name">{nameOf(pl)}</span>
         {#if pl?.type}<span class="badge">{pl.type}</span>{/if}
       </button>
@@ -145,10 +183,14 @@
             {#each itemsByPlaylist[key] as item, i}
               {@const isPres = !item?.type || item.type === 'presentation'}
               {@const presUuid = item?.presentation_info?.presentation_uuid || item?.id?.uuid}
+              {@const isActiveRow =
+                key === activePlaylistKey &&
+                ((activeItemIdx !== null && activeItemIdx === i) ||
+                 (isPres && presUuid && presUuid === activeUuid))}
               <button
                 class="item"
                 class:header={item?.type === 'header'}
-                class:active={isPres && presUuid === activeUuid}
+                class:active={isActiveRow}
                 disabled={!isPres && item?.type !== 'media' && item?.type !== 'header'}
                 on:click={() => loadItem(pl, item, i)}
                 title={item?.type || 'presentation'}
@@ -193,6 +235,7 @@
     border-radius: 8px;
   }
   .pl-head:hover { background: var(--panel-2); }
+  .pl-head.active { background: var(--panel-2); cursor: default; }
   .chev { width: 14px; color: var(--muted); }
   .pl-name { flex: 1; font-weight: 600; font-size: 14px; }
   .items { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 6px 14px; }
@@ -205,6 +248,7 @@
   .item:hover { background: var(--panel-2); }
   .item.active { background: var(--panel-2); border-color: var(--accent); }
   .item.header { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .item.header.active { color: var(--text, inherit); }
   .hdot { width: 10px; height: 10px; border-radius: 50%; }
   .idx {
     width: 22px; height: 22px; border-radius: 6px;

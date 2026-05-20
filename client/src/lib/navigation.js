@@ -1,26 +1,17 @@
 // Centralized slide navigation. Both keyboard handlers and the Controls bar
-// call into here so the active slide is always reflected in the UI, and so we
-// can hop to the next/previous presentation in the playlist when we run off
-// the end of the current one.
+// call into here. next/previous defer to ProPresenter's own /v1/trigger/next
+// and /v1/trigger/previous endpoints, which already handle wrapping into the
+// next/previous playlist item, so we don't need to compute that ourselves.
 
 import { get } from 'svelte/store';
 import { api } from './api.js';
 import {
   currentPresentation,
   currentSlideIndex,
-  currentPlaylistItems,
   currentItemIndex,
   status
 } from './stores.js';
 import { suppressSync, resumeSync } from './sync.js';
-
-function isPresentationItem(item) {
-  return !item?.type || item.type === 'presentation';
-}
-
-function presentationUuidOf(item) {
-  return item?.presentation_info?.presentation_uuid || item?.id?.uuid || null;
-}
 
 function parseSlides(data) {
   const groups = data?.groups || data?.presentation?.groups || [];
@@ -76,59 +67,20 @@ export async function gotoSlide(i) {
   }
 }
 
-// Find adjacent presentation item in the current playlist (skipping headers/media).
-function findAdjacentPresentation(direction) {
-  const items = get(currentPlaylistItems) || [];
-  const idx = get(currentItemIndex);
-  if (idx == null) return null;
-  for (let j = idx + direction; j >= 0 && j < items.length; j += direction) {
-    if (isPresentationItem(items[j])) {
-      const uuid = presentationUuidOf(items[j]);
-      if (uuid) return { index: j, uuid };
-    }
-  }
-  return null;
-}
-
-async function jumpToAdjacentPresentation(direction, slidePos) {
-  const target = findAdjacentPresentation(direction);
-  if (!target) return false;
-  suppressSync(1500);
-  try {
-    const data = await api.presentation(target.uuid);
-    const slides = parseSlides(data);
-    currentPresentation.set({
-      uuid: target.uuid,
-      name: data?.id?.name || 'Presentation',
-      slides
-    });
-    currentItemIndex.set(target.index);
-    const slideIdx = slidePos === 'last' ? Math.max(0, slides.length - 1) : 0;
-    currentSlideIndex.set(slideIdx);
-    await api.triggerPresentation(target.uuid, slideIdx);
-    resumeSync();
-    return true;
-  } catch (e) {
-    status.set({ kind: 'error', message: e.message });
-    return false;
-  }
-}
-
 export async function next() {
-  const pres = get(currentPresentation);
-  if (!pres) return;
-  const i = get(currentSlideIndex) ?? 0;
-  const max = (pres.slides || []).length - 1;
-  if (i < max) return gotoSlide(i + 1);
-  await jumpToAdjacentPresentation(+1, 'first');
+  try {
+    await api.next();
+    // ProPresenter is now driving — let sync pick up whatever it advanced to
+    // (possibly the next playlist item) so the sidebar highlight follows.
+    resumeSync();
+  } catch (e) { status.set({ kind: 'error', message: e.message }); }
 }
 
 export async function previous() {
-  const pres = get(currentPresentation);
-  if (!pres) return;
-  const i = get(currentSlideIndex) ?? 0;
-  if (i > 0) return gotoSlide(i - 1);
-  await jumpToAdjacentPresentation(-1, 'last');
+  try {
+    await api.previous();
+    resumeSync();
+  } catch (e) { status.set({ kind: 'error', message: e.message }); }
 }
 
 export async function clearSlide() {

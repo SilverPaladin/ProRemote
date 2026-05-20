@@ -11,7 +11,12 @@
 
 import { get } from 'svelte/store';
 import { api } from './api.js';
-import { currentPresentation, currentSlideIndex } from './stores.js';
+import {
+  currentPresentation,
+  currentSlideIndex,
+  currentPlaylistItems,
+  currentItemIndex
+} from './stores.js';
 import { loadPresentation } from './navigation.js';
 
 let timer = null;
@@ -85,6 +90,13 @@ function apply(data) {
 
   // Different presentation became active in ProPresenter — load it.
   if (uuid && pres?.uuid !== uuid) {
+    // If this presentation lives in the currently-loaded playlist, point
+    // currentItemIndex at it so the playlist sidebar can highlight the new
+    // active row immediately (e.g. after pressing next/previous past the
+    // end of a presentation).
+    const matchedIndex = findItemIndexByUuid(uuid);
+    if (matchedIndex !== -1) currentItemIndex.set(matchedIndex);
+
     loadPresentation(uuid).then(() => {
       if (idx !== null) currentSlideIndex.set(idx);
     });
@@ -94,6 +106,23 @@ function apply(data) {
   if (idx !== null && get(currentSlideIndex) !== idx) {
     currentSlideIndex.set(idx);
   }
+}
+
+// Locate a presentation uuid inside the currently-loaded playlist items so we
+// can keep the playlist sidebar's highlight in sync with whatever ProPresenter
+// advanced to. Returns -1 when there is no playlist context or no match.
+function findItemIndexByUuid(uuid) {
+  const items = get(currentPlaylistItems);
+  if (!Array.isArray(items) || !items.length) return -1;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const itUuid =
+      it?.presentation_info?.presentation_uuid ||
+      it?.presentation?.id?.uuid ||
+      it?.id?.uuid;
+    if (itUuid && itUuid === uuid) return i;
+  }
+  return -1;
 }
 
 // ProPresenter's response shape for slide-index varies between versions.
