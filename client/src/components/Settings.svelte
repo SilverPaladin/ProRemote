@@ -46,7 +46,7 @@
   <div class="body">
     <p class="muted">
       Enter the IP/hostname and port of the computer running ProPresenter. The network API
-      is configured in <em>Preferences → Network</em>. The default port is <strong>1025</strong>.
+      is configured in <em>Preferences → Network</em>. The default port is <strong>50001 or 1025 (v19 or less)</strong>.
     </p>
 
     <label>
@@ -56,7 +56,7 @@
 
     <label>
       <span>Port</span>
-      <input type="number" bind:value={port} placeholder="1025" />
+      <input type="number" bind:value={port} placeholder="50001" />
     </label>
 
     <label class="row">

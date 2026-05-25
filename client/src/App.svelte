@@ -94,7 +94,7 @@
   <header class="topbar">
     <div class="brand">
       <div>
-        <div class="title">Pro Remote</div>
+        <div class="title">ProRemote</div>
         <div class="sub muted">
           {#if connected}
             <span class="dot ok"></span> {$settings.host}:{$settings.port} {version ? `· ${version}` : ''}
@@ -120,15 +120,6 @@
 
     <section class="content card">
       {#if $currentPresentation}
-        <div class="content-head">
-          <div>
-            <h2>{$currentPresentation.name || 'Presentation'}</h2>
-            <div class="muted">
-              {($currentPresentation.slides || []).length} slides ·
-              Slide {($currentSlideIndex ?? 0) + 1}
-            </div>
-          </div>
-        </div>
         <SlideGrid />
       {:else}
         <div class="empty">
@@ -165,12 +156,6 @@
     flex-shrink: 0;
   }
   .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .logo {
-    width: 38px; height: 38px; border-radius: 10px;
-    background: linear-gradient(135deg, #4f8cff, #8b5cf6);
-    display: grid; place-items: center; font-weight: 800; letter-spacing: 0.5px;
-    box-shadow: var(--shadow);
-  }
   .title { font-weight: 700; font-size: 16px; }
   .sub { font-size: 12px; display: flex; align-items: center; gap: 6px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -192,9 +177,7 @@
 
   .sidebar { padding: 0; min-height: 0; display: flex; flex-direction: column; }
   .content { padding: 16px; min-height: 0; display: flex; flex-direction: column; }
-  .content-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 12px; }
-  .content-head h2 { margin: 0 0 4px 0; font-size: 18px; }
-
+  
   .empty {
     flex: 1; display: grid; place-items: center; text-align: center;
   }
@@ -208,7 +191,5 @@
     }
     .sidebar { max-height: 26vh; min-height: 0; }
     .content { min-height: 0; padding: 10px; }
-    .content-head { margin-bottom: 8px; }
-    .content-head h2 { font-size: 16px; }
   }
 </style>

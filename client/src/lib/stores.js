@@ -31,7 +31,7 @@ function load() {
 export const settings = writable(load());
 
 settings.subscribe((v) => {
-  try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {}
+  try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { }
 });
 
 // Currently-loaded presentation state

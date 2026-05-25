@@ -67,14 +67,15 @@
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    /* Cap at 2 columns; tiles scale fluidly with the container width. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: max-content; /* size each row to its content; don't squash when scrolling */
     gap: 12px;
     padding-right: 6px;
     align-content: start;
   }
-  @media (max-width: 560px) {
-    .grid { grid-template-columns: repeat(2, 1fr); gap: 8px; padding-right: 0; }
+  @media (max-width: 420px) {
+    .grid { grid-template-columns: 1fr; gap: 8px; padding-right: 0; }
   }
   .slide {
     display: block;

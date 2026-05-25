@@ -1,19 +1,18 @@
-// Background sync: poll ProPresenter for the currently-presenting slide so
-// that changes made directly inside ProPresenter (someone clicked a slide on
-// the desktop) are reflected in this remote.
+// Background sync: poll ProPresenter for the currently-focused playlist,
+// item and slide, and mirror them into local state. The UI simply reflects
+// whatever ProPresenter says is focused — when the user issues a command
+// (focus playlist, trigger item, trigger slide, next, previous), the next
+// poll surfaces the result.
 //
 // We only update local state — we never trigger anything from here, so this
 // can never feed back and cause an infinite loop.
-//
-// To avoid flicker right after the user triggers a slide locally (the poll
-// might return a stale index from before our trigger took effect), local
-// actions call suppressSync() to mute the next few polls.
 
 import { get } from 'svelte/store';
 import { api } from './api.js';
 import {
   currentPresentation,
   currentSlideIndex,
+  currentPlaylistId,
   currentPlaylistItems,
   currentItemIndex
 } from './stores.js';
@@ -21,30 +20,19 @@ import { loadPresentation } from './navigation.js';
 
 let timer = null;
 let inFlight = null;
-let suppressUntil = 0;
-let paused = false;
 let backoffMs = 0;
+let cachedPlaylistId = null;
+// Tracks the last header-row index we auto-skipped past, so a slow poll
+// doesn't fire `next` repeatedly for the same header.
+let lastSkippedHeaderIdx = null;
 const POLL_MS = 700;
 const MAX_BACKOFF = 5000;
 
-export function suppressSync(ms = 900) {
-  suppressUntil = Math.max(suppressUntil, Date.now() + ms);
-}
-
-// Hard pause — used when the user is browsing a different presentation than
-// the currently-presenting one. Resumed automatically the next time a slide
-// is triggered locally (via gotoSlide / next / previous).
-export function pauseSync() {
-  paused = true;
-}
-
-export function resumeSync() {
-  paused = false;
-}
-
 export function startSync() {
   stopSync();
-  schedule(POLL_MS);
+  // First tick runs immediately so the UI snaps to ProPresenter's current
+  // state as soon as we connect.
+  schedule(0);
 }
 
 export function stopSync() {
@@ -53,6 +41,7 @@ export function stopSync() {
   if (inFlight) inFlight.abort();
   inFlight = null;
   backoffMs = 0;
+  lastSkippedHeaderIdx = null;
 }
 
 function schedule(ms) {
@@ -61,68 +50,81 @@ function schedule(ms) {
 
 async function tick() {
   timer = null;
-  if (paused || Date.now() < suppressUntil) {
-    schedule(POLL_MS);
-    return;
-  }
   try {
     inFlight = new AbortController();
-    const data = await api.activeSlideIndex(inFlight.signal);
+    const signal = inFlight.signal;
+    const [focused, slide] = await Promise.all([
+      api.focusedPlaylist().catch((e) => { if (e?.name === 'AbortError') throw e; return null; }),
+      api.activeSlideIndex(signal).catch((e) => { if (e?.name === 'AbortError') throw e; return null; })
+    ]);
     inFlight = null;
     backoffMs = 0;
-    apply(data);
+    await applyFocused(focused);
+    await applySlide(slide);
     schedule(POLL_MS);
   } catch (e) {
     inFlight = null;
     if (e?.name === 'AbortError') return;
-    // Surface errors so you can spot a misconfigured endpoint or CORS issue.
-    // (Uncomment in dev if needed.)
     console.warn('[sync] poll failed:', e.message);
     backoffMs = Math.min(MAX_BACKOFF, Math.max(POLL_MS * 2, backoffMs * 2 || POLL_MS * 2));
     schedule(backoffMs);
   }
 }
 
-function apply(data) {
-  const idx  = extractIndex(data);
+async function applyFocused(focused) {
+  if (!focused) return;
+  const plUuid = focused?.playlist?.uuid;
+  const itemIdx = focused?.item?.index;
+  if (!plUuid) return;
+
+  // Focused playlist changed in ProPresenter — refetch its items.
+  if (plUuid !== cachedPlaylistId) {
+    cachedPlaylistId = plUuid;
+    currentPlaylistId.set(plUuid);
+    try {
+      const res = await api.playlist(plUuid);
+      const items = Array.isArray(res) ? res : (res?.items || res?.data || []);
+      currentPlaylistItems.set(items);
+    } catch {
+      currentPlaylistItems.set([]);
+    }
+  }
+
+  if (typeof itemIdx === 'number' && get(currentItemIndex) !== itemIdx) {
+    currentItemIndex.set(itemIdx);
+  }
+
+  // If ProPresenter parked focus on a header row (which has no slides),
+  // auto-advance once so we land on the next real presentation. Guard
+  // against re-firing for the same header on subsequent polls.
+  if (typeof itemIdx === 'number') {
+    const items = get(currentPlaylistItems) || [];
+    const cur = items[itemIdx];
+    if (cur?.type === 'header' && lastSkippedHeaderIdx !== itemIdx) {
+      lastSkippedHeaderIdx = itemIdx;
+      try { await api.next(); } catch { /* surfaced on next poll */ }
+    } else if (cur?.type !== 'header') {
+      lastSkippedHeaderIdx = null;
+    }
+  }
+}
+
+async function applySlide(data) {
+  const idx = extractIndex(data);
   const uuid = extractUuid(data);
   const pres = get(currentPresentation);
 
   // Different presentation became active in ProPresenter — load it.
   if (uuid && pres?.uuid !== uuid) {
-    // If this presentation lives in the currently-loaded playlist, point
-    // currentItemIndex at it so the playlist sidebar can highlight the new
-    // active row immediately (e.g. after pressing next/previous past the
-    // end of a presentation).
-    const matchedIndex = findItemIndexByUuid(uuid);
-    if (matchedIndex !== -1) currentItemIndex.set(matchedIndex);
-
-    loadPresentation(uuid).then(() => {
-      if (idx !== null) currentSlideIndex.set(idx);
-    });
+    const itemIdx = get(currentItemIndex);
+    await loadPresentation(uuid, typeof itemIdx === 'number' ? itemIdx : null);
+    if (idx !== null) currentSlideIndex.set(idx);
     return;
   }
 
   if (idx !== null && get(currentSlideIndex) !== idx) {
     currentSlideIndex.set(idx);
   }
-}
-
-// Locate a presentation uuid inside the currently-loaded playlist items so we
-// can keep the playlist sidebar's highlight in sync with whatever ProPresenter
-// advanced to. Returns -1 when there is no playlist context or no match.
-function findItemIndexByUuid(uuid) {
-  const items = get(currentPlaylistItems);
-  if (!Array.isArray(items) || !items.length) return -1;
-  for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    const itUuid =
-      it?.presentation_info?.presentation_uuid ||
-      it?.presentation?.id?.uuid ||
-      it?.id?.uuid;
-    if (itUuid && itUuid === uuid) return i;
-  }
-  return -1;
 }
 
 // ProPresenter's response shape for slide-index varies between versions.

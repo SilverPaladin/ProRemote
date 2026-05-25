@@ -44,6 +44,11 @@ export const api = {
   // Playlists
   playlists: () => request('/v1/playlists'),
   playlist: (id) => request(`/v1/playlist/${encodeURIComponent(id)}`),
+  // Returns the currently-focused playlist + item, e.g.
+  // { playlist: { uuid, name, index }, item: { uuid, name, index } }
+  focusedPlaylist: () => request('/v1/playlist/focused?chunked=false'),
+  focusPlaylist: (id) => request(`/v1/playlist/${encodeURIComponent(id)}/focus`),
+  triggerFocusedPlaylist: () => request('/v1/playlist/focused/trigger'),
 
   // Presentations
   presentation: (uuid) => request(`/v1/presentation/${encodeURIComponent(uuid)}`),

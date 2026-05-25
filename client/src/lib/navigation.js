@@ -11,7 +11,6 @@ import {
   currentItemIndex,
   status
 } from './stores.js';
-import { suppressSync, resumeSync } from './sync.js';
 
 function parseSlides(data) {
   const groups = data?.groups || data?.presentation?.groups || [];
@@ -56,12 +55,8 @@ export async function gotoSlide(i) {
   if (max < 0) return;
   const clamped = Math.max(0, Math.min(max, i));
   currentSlideIndex.set(clamped);
-  suppressSync();
   try {
     await api.triggerPresentation(pres.uuid, clamped);
-    // Triggering a slide makes this presentation the active one in
-    // ProPresenter, so it's safe to let sync take over again.
-    resumeSync();
   } catch (e) {
     status.set({ kind: 'error', message: e.message });
   }
@@ -70,16 +65,12 @@ export async function gotoSlide(i) {
 export async function next() {
   try {
     await api.next();
-    // ProPresenter is now driving — let sync pick up whatever it advanced to
-    // (possibly the next playlist item) so the sidebar highlight follows.
-    resumeSync();
   } catch (e) { status.set({ kind: 'error', message: e.message }); }
 }
 
 export async function previous() {
   try {
     await api.previous();
-    resumeSync();
   } catch (e) { status.set({ kind: 'error', message: e.message }); }
 }
 
