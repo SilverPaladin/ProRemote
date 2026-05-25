@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { settings } from '../lib/stores.js';
 
   const dispatch = createEventDispatcher();
@@ -8,6 +8,27 @@
   let port = $settings.port;
   let https = $settings.https;
   let isFullscreen = !!document.fullscreenElement;
+  let deferredPrompt = null;
+  let isInstalled =
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  onMount(() => {
+    const onPrompt = (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    };
+    const onInstalled = () => {
+      isInstalled = true;
+      deferredPrompt = null;
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  });
 
   function onFullscreenChange() {
     isFullscreen = !!document.fullscreenElement;
@@ -21,8 +42,36 @@
     }
   }
 
+  async function installPwa() {
+    if (!deferredPrompt) {
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIos) {
+        alert('To install: tap the Share button in Safari, then "Add to Home Screen".');
+      } else {
+        alert('Install is not available yet. Use your browser menu (e.g. "Install app" or "Add to Home screen") to install ProRemote.');
+      }
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      deferredPrompt = null;
+    }
+  }
+
+  function fsButtonAction() {
+    if (isFullscreen) {
+      toggleFullscreen();
+    } else {
+      installPwa();
+    }
+  }
+
+  $: fsButtonLabel = isFullscreen ? 'Exit Full Screen' : 'Install as PWA';
+
   function save() {
     settings.set({ host: host.trim(), port: String(port).trim(), https: !!https });
+    document.documentElement.requestFullscreen?.().catch(() => {});
     dispatch('saved');
   }
 </script>
@@ -65,8 +114,8 @@
     </label>
 
     <div class="fs-row">
-      <button type="button" class="fs-btn" on:click={toggleFullscreen}>
-        {isFullscreen ? 'Exit Full Screen' : 'Go Full Screen'}
+      <button type="button" class="fs-btn" on:click={fsButtonAction} disabled={!isFullscreen && isInstalled}>
+        {isInstalled && !isFullscreen ? 'Already Installed' : fsButtonLabel}
       </button>
     </div>
 

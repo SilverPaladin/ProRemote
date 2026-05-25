@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [svelte(), cloudflare()],
   root: 'client',
   base: './',
   build: {
@@ -11,7 +13,7 @@ export default defineConfig({
     target: 'es2018'
   },
   server: {
-    port: 5173,
+    port: 8000,
     host: true
   }
 });
