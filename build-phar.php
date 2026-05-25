@@ -1,6 +1,6 @@
 <?php
 /**
- * Build propresenter-remote.phar from app.php + public/ + vendor/.
+ * Build proremote.phar from app.php + public/ + vendor/.
  *
  * Run AFTER `npm run build` (which produces public/).
  *
@@ -10,7 +10,7 @@
  */
 
 $root = __DIR__;
-$pharFile = $root . '/propresenter-remote.phar';
+$pharFile = $root . '/proremote.phar';
 $entry = 'app.php';
 
 if (ini_get('phar.readonly')) {
@@ -57,8 +57,8 @@ foreach ($paths as $abs) {
 $stub = <<<'PHP'
 #!/usr/bin/env php
 <?php
-Phar::mapPhar('propresenter-remote.phar');
-require 'phar://propresenter-remote.phar/app.php';
+Phar::mapPhar('proremote.phar');
+require 'phar://proremote.phar/app.php';
 __HALT_COMPILER();
 PHP;
 $phar->setStub($stub);
@@ -69,5 +69,5 @@ $count = count($paths);
 $size = number_format(filesize($pharFile) / 1024, 1);
 echo "Built {$pharFile}  ({$count} files, {$size} KB)\n";
 echo "\nNext:\n";
-echo "  php propresenter-remote.phar                    # run directly\n";
-echo "  phpacker build all --src=./propresenter-remote.phar\n";
+echo "  php proremote.phar                    # run directly\n";
+echo "  phpacker build all --src=./proremote.phar\n";

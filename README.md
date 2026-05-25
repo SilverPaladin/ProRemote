@@ -1,4 +1,4 @@
-# ProPresenter Remote
+# ProRemote
 
 A mobile/tablet-friendly browser remote for [ProPresenter](https://renewedvision.com/propresenter/) built with **Svelte + Vite** and packaged as a native binary with **[phpacker](https://phpacker.dev/)**.
 
@@ -65,10 +65,10 @@ npm run build
 php -d phar.readonly=0 build-phar.php
 ```
 
-This produces `propresenter-remote.phar` containing `app.php`, `vendor/qrcode.php` and the entire `public/` SPA. You can run it stand-alone:
+This produces `proremote.phar` containing `app.php`, `vendor/qrcode.php` and the entire `public/` SPA. You can run it stand-alone:
 
 ```bash
-php propresenter-remote.phar
+php proremote.phar
 ```
 
 ### 3. Compile to a native binary
@@ -77,23 +77,23 @@ Install phpacker: <https://phpacker.dev/docs/installation/>
 
 ```bash
 # Single platform (platforms: mac | linux | windows | all)
-phpacker build mac arm --src=./propresenter-remote.phar
-phpacker build windows x64 --src=./propresenter-remote.phar
-phpacker build linux x64 --src=./propresenter-remote.phar
+phpacker build mac arm --src=./proremote.phar
+phpacker build windows x64 --src=./proremote.phar
+phpacker build linux x64 --src=./proremote.phar
 
 # All supported platforms
-phpacker build all --src=./propresenter-remote.phar
+phpacker build all --src=./proremote.phar
 
 # Custom output dir / PHP version
-phpacker build all --src=./propresenter-remote.phar --dest=./build --php=8.3
+phpacker build all --src=./proremote.phar --dest=./build --php=8.3
 ```
 
 The resulting binary is fully self-contained — no PHP install, no separate `public/` folder needed. Just run it:
 
 ```bash
-./propresenter-remote
+./proremote
 # or override the port / bind address
-PORT=9000 HOST=0.0.0.0 ./propresenter-remote
+PORT=9000 HOST=0.0.0.0 ./proremote
 ```
 
 ## CORS

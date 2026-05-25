@@ -1,11 +1,11 @@
 <?php
 /**
- * ProPresenter Remote — entry point.
+ * ProRemote — entry point.
  *
  * Runs in three contexts with the SAME code path:
  *   1. Plain PHP CLI:        php app.php
- *   2. Phar:                 php propresenter-remote.phar
- *   3. phpacker binary:      ./propresenter-remote (windows-x64.exe, etc.)
+ *   2. Phar:                 php proremote.phar
+ *   3. phpacker binary:      ./proremote (windows-x64.exe, etc.)
  *
  * Implements its own minimal HTTP server using stream_socket_server() rather
  * than re-exec'ing `php -S`, because the SAPI used inside the phpacker binary
@@ -34,7 +34,7 @@ $localUrl = "http://127.0.0.1:{$port}";
 $lanUrl   = "http://{$lanIp}:{$port}";
 
 echo "\n";
-echo "  ProPresenter Remote\n";
+echo "  ProRemote\n";
 echo "  -------------------\n";
 echo "  Local:   {$localUrl}\n";
 echo "  Network: {$lanUrl}\n";
