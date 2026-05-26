@@ -32,12 +32,24 @@ function parseSlides(data) {
 
 export async function loadPresentation(uuid, itemIndex = null) {
   if (!uuid) return false;
+  // Drop the previous presentation immediately so its thumbnails don't
+  // linger on screen while we fetch the new one. Without this, the old
+  // <img> tags keep their old src visible until the new fetch resolves,
+  // which looks like the thumbnails are being cached across presentations.
+  const prev = get(currentPresentation);
+  if (prev && prev.uuid !== uuid) {
+    currentPresentation.set(null);
+    currentSlideIndex.set(0);
+  }
   try {
     const data = await api.presentation(uuid);
     currentPresentation.set({
       uuid,
       name: data?.id?.name || data?.name || 'Presentation',
-      slides: parseSlides(data)
+      slides: parseSlides(data),
+      // Per-load nonce used to cache-bust thumbnail URLs so we never get
+      // a stale image for the same (uuid, index) from the browser cache.
+      loadId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     });
     if (itemIndex !== null) currentItemIndex.set(itemIndex);
     currentSlideIndex.set(0);

@@ -25,7 +25,11 @@ async function request(path, { method = 'GET', body, signal, accept = 'applicati
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal,
-    mode: 'cors'
+    mode: 'cors',
+    // Bypass the browser HTTP cache for all ProPresenter API calls.
+    // Otherwise slide_index / playlist / presentation responses get reused
+    // across presentation switches and we end up rendering stale slides.
+    cache: 'no-store'
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -76,6 +80,9 @@ export const api = {
   clearSlide: () => request('/v1/clear/layer/slide'),
 
   // Thumbnails — returns an image URL the <img> tag can load directly.
-  thumbnailUrl: (uuid, index, quality = 256) =>
-    `${baseUrl()}/v1/presentation/${encodeURIComponent(uuid)}/thumbnail/${index}?quality=${quality}`
+  // The optional `nonce` is appended as a query param so each presentation
+  // load forces the browser to refetch thumbnails instead of reusing a
+  // previously-cached image at the same (uuid, index) path.
+  thumbnailUrl: (uuid, index, quality = 256, nonce = '') =>
+    `${baseUrl()}/v1/presentation/${encodeURIComponent(uuid)}/thumbnail/${index}?quality=${quality}${nonce ? `&_=${encodeURIComponent(nonce)}` : ''}`
 };
