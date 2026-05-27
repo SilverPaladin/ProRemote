@@ -213,21 +213,22 @@
   }
 
   .header-banner {
-    flex: 1;
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    text-align: center; gap: 12px;
-    border-radius: 8px;
+    display: flex; align-items: center; gap: 12px;
+    border-radius: 6px;
     color: #fff;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    padding: 24px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+    padding: 8px 14px;
+    flex: 0 0 auto;
   }
   .hb-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
     opacity: 0.85;
+    flex: 0 0 auto;
   }
   .hb-name {
-    font-size: clamp(28px, 6vw, 64px); font-weight: 700; line-height: 1.1;
-    word-break: break-word;
+    font-size: 14px; font-weight: 600; line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1; min-width: 0;
   }
   .empty-icon { font-size: 56px; margin-bottom: 8px; }
   .empty h3 { margin: 0 0 6px 0; }
