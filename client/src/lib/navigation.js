@@ -9,7 +9,6 @@ import {
   currentPresentation,
   currentSlideIndex,
   currentItemIndex,
-  currentPlaylistItems,
   status
 } from './stores.js';
 
@@ -40,7 +39,13 @@ export async function loadPresentation(uuid, itemIndex = null) {
   const prev = get(currentPresentation);
   if (prev && prev.uuid !== uuid) {
     currentPresentation.set(null);
-    currentSlideIndex.set(0);
+    // -1 means "no active slide in this presentation". sync.js's applySlide
+    // will set a real index only if ProPresenter's active-slide uuid matches
+    // this newly loaded presentation. Otherwise nothing is highlighted —
+    // which is correct, because we're just browsing/focusing this item, not
+    // playing it. Without this, loading a new presentation would always
+    // light up slide 0 even when that slide isn't actually projected.
+    currentSlideIndex.set(-1);
   }
   try {
     const data = await api.presentation(uuid);
@@ -53,7 +58,7 @@ export async function loadPresentation(uuid, itemIndex = null) {
       loadId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     });
     if (itemIndex !== null) currentItemIndex.set(itemIndex);
-    currentSlideIndex.set(0);
+    currentSlideIndex.set(-1);
     return true;
   } catch (e) {
     status.set({ kind: 'error', message: e.message });
@@ -75,34 +80,9 @@ export async function gotoSlide(i) {
   }
 }
 
-// If the user is on the last slide of the current presentation and the
-// following playlist item is a header, /v1/trigger/next will land focus on
-// that header (which has no slides) — sync.js then has to auto-skip past it
-// on the next poll, which causes a visible stutter. In that case we ask the
-// focused playlist to advance by an item instead, which jumps straight to
-// the next real presentation.
-function nextItemIsHeader() {
-  const items = get(currentPlaylistItems) || [];
-  const itemIdx = get(currentItemIndex);
-  if (typeof itemIdx !== 'number') return false;
-  const nextItem = items[itemIdx + 1];
-  return nextItem?.type === 'header';
-}
-
-function atLastSlide() {
-  const pres = get(currentPresentation);
-  const slides = pres?.slides || [];
-  if (slides.length === 0) return false;
-  return get(currentSlideIndex) >= slides.length - 1;
-}
-
 export async function next() {
   try {
-    if (atLastSlide()) {
-      await api.focusedNext();
-    } else {
-      await api.next();
-    }
+    await api.next();
   } catch (e) { status.set({ kind: 'error', message: e.message }); }
 }
 

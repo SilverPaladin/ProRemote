@@ -121,20 +121,16 @@
   }
 
   function selectPlaylist(pl) {
+    // Browse-only: we just fetch this playlist's details and let the user
+    // look at it. We do NOT call /focus or /trigger here — sync.js polls
+    // /playlist/focused?chunked=false on its own and the highlight in this
+    // panel follows whatever ProPresenter says is the focused item. This
+    // avoids fighting the user (e.g. arrow keys triggering a force-play of
+    // the first slide every time they pick a playlist to browse).
     const key = idOf(pl);
     selectedPlaylistKey = key;
     pickerOpen = false;
     if (!itemsByPlaylist[key]) fetchItems(key);
-    // Tell ProPresenter to focus this playlist so subsequent next/previous
-    // triggers operate within it.
-    (async () => {
-      try {
-        await api.focusPlaylist(key);
-        await api.triggerFocusedPlaylist();
-      } catch (e) {
-        dispatch('error', e.message);
-      }
-    })();
   }
 
   async function loadItem(pl, item, index) {
@@ -296,6 +292,12 @@
   .item.active:not(.header) {
     background: rgba(255,255,255,0.10);
     box-shadow: inset 2px 0 0 var(--accent);
+  }
+  /* Header rows already have a colored background, so we just add the
+     accent indicator and a slight overlay to mark them as the focused
+     item when ProPresenter reports a header as selected. */
+  .item.header.active {
+    box-shadow: inset 2px 0 0 var(--accent), inset 0 0 0 9999px rgba(255,255,255,0.08);
   }
   .ico { color: var(--muted); display: inline-flex; flex: 0 0 auto; }
   .item.active .ico { color: var(--text, inherit); }

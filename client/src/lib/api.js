@@ -77,10 +77,6 @@ export const api = {
   triggerActiveIndex: (index) => request(`/v1/presentation/active/${index}/trigger`),
   next: () => request('/v1/trigger/next'),
   previous: () => request('/v1/trigger/previous'),
-  // Advance the focused playlist to its next item. Useful when /v1/trigger/next
-  // would land on a header row (which has no slides) — this jumps straight to
-  // the next presentation item instead.
-  focusedNext: () => request('/v1/playlist/focused/next/trigger'),
   clearSlide: () => request('/v1/clear/layer/slide'),
 
   // Thumbnails — returns an image URL the <img> tag can load directly.

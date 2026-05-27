@@ -8,7 +8,7 @@
     if (!$currentPresentation?.uuid) return '';
     // Pass the per-load nonce so each new presentation load fetches fresh
     // thumbnails instead of reusing browser-cached images at the same path.
-    return api.thumbnailUrl($currentPresentation.uuid, i, 320, $currentPresentation.loadId || '');
+    return api.thumbnailUrl($currentPresentation.uuid, i, 640, $currentPresentation.loadId || '');
   }
 
   let gridEl;

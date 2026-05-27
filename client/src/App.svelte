@@ -1,6 +1,13 @@
 <script>
   import { onMount } from 'svelte';
-  import { settings, currentPresentation, currentSlideIndex, status } from './lib/stores.js';
+  import {
+    settings,
+    currentPresentation,
+    currentSlideIndex,
+    currentPlaylistItems,
+    currentItemIndex,
+    status
+  } from './lib/stores.js';
   import { api } from './lib/api.js';
   import { next, previous, clearSlide } from './lib/navigation.js';
   import { startSync, stopSync } from './lib/sync.js';
@@ -82,6 +89,24 @@
     showSettings = false;
     testConnection();
   }
+
+  // The currently-focused playlist item (mirrors /v1/playlist/focused). If
+  // ProPresenter has parked focus on a header row, we show a banner in the
+  // slide area with that header's name, matching ProPresenter's own UI.
+  $: focusedItem =
+    typeof $currentItemIndex === 'number'
+      ? ($currentPlaylistItems || [])[$currentItemIndex]
+      : null;
+  $: focusedHeader = focusedItem?.type === 'header' ? focusedItem : null;
+
+  function headerBgFromItem(item) {
+    const c = item?.header_color;
+    if (!c) return 'var(--panel-2)';
+    const r = Math.round((c.red || 0) * 255);
+    const g = Math.round((c.green || 0) * 255);
+    const b = Math.round((c.blue || 0) * 255);
+    return `rgb(${r},${g},${b})`;
+  }
 </script>
 
 <svelte:window
@@ -119,7 +144,12 @@
     </aside>
 
     <section class="content card">
-      {#if $currentPresentation}
+      {#if focusedHeader}
+        <div class="header-banner" style:background={headerBgFromItem(focusedHeader)}>
+          <div class="hb-label muted">Header</div>
+          <div class="hb-name">{focusedHeader?.id?.name || focusedHeader?.name || 'Header'}</div>
+        </div>
+      {:else if $currentPresentation}
         <SlideGrid />
       {:else}
         <div class="empty">
@@ -180,6 +210,24 @@
   
   .empty {
     flex: 1; display: grid; place-items: center; text-align: center;
+  }
+
+  .header-banner {
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; gap: 12px;
+    border-radius: 8px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    padding: 24px;
+  }
+  .hb-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    opacity: 0.85;
+  }
+  .hb-name {
+    font-size: clamp(28px, 6vw, 64px); font-weight: 700; line-height: 1.1;
+    word-break: break-word;
   }
   .empty-icon { font-size: 56px; margin-bottom: 8px; }
   .empty h3 { margin: 0 0 6px 0; }
