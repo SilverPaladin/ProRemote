@@ -77,12 +77,16 @@ export const api = {
   triggerActiveIndex: (index) => request(`/v1/presentation/active/${index}/trigger`),
   next: () => request('/v1/trigger/next'),
   previous: () => request('/v1/trigger/previous'),
+  // Advance the focused playlist to its next item. Useful when /v1/trigger/next
+  // would land on a header row (which has no slides) — this jumps straight to
+  // the next presentation item instead.
+  focusedNext: () => request('/v1/playlist/focused/next/trigger'),
   clearSlide: () => request('/v1/clear/layer/slide'),
 
   // Thumbnails — returns an image URL the <img> tag can load directly.
   // The optional `nonce` is appended as a query param so each presentation
   // load forces the browser to refetch thumbnails instead of reusing a
   // previously-cached image at the same (uuid, index) path.
-  thumbnailUrl: (uuid, index, quality = 256, nonce = '') =>
+  thumbnailUrl: (uuid, index, quality = 1024, nonce = '') =>
     `${baseUrl()}/v1/presentation/${encodeURIComponent(uuid)}/thumbnail/${index}?quality=${quality}${nonce ? `&_=${encodeURIComponent(nonce)}` : ''}`
 };

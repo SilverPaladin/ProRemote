@@ -9,6 +9,7 @@ import {
   currentPresentation,
   currentSlideIndex,
   currentItemIndex,
+  currentPlaylistItems,
   status
 } from './stores.js';
 
@@ -74,9 +75,34 @@ export async function gotoSlide(i) {
   }
 }
 
+// If the user is on the last slide of the current presentation and the
+// following playlist item is a header, /v1/trigger/next will land focus on
+// that header (which has no slides) — sync.js then has to auto-skip past it
+// on the next poll, which causes a visible stutter. In that case we ask the
+// focused playlist to advance by an item instead, which jumps straight to
+// the next real presentation.
+function nextItemIsHeader() {
+  const items = get(currentPlaylistItems) || [];
+  const itemIdx = get(currentItemIndex);
+  if (typeof itemIdx !== 'number') return false;
+  const nextItem = items[itemIdx + 1];
+  return nextItem?.type === 'header';
+}
+
+function atLastSlide() {
+  const pres = get(currentPresentation);
+  const slides = pres?.slides || [];
+  if (slides.length === 0) return false;
+  return get(currentSlideIndex) >= slides.length - 1;
+}
+
 export async function next() {
   try {
-    await api.next();
+    if (atLastSlide()) {
+      await api.focusedNext();
+    } else {
+      await api.next();
+    }
   } catch (e) { status.set({ kind: 'error', message: e.message }); }
 }
 

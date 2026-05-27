@@ -106,6 +106,19 @@ async function applyFocused(focused) {
     } else if (cur?.type !== 'header') {
       lastSkippedHeaderIdx = null;
     }
+
+    // On fresh connect (or any time focus lands on a presentation item
+    // before a slide has been triggered), ProPresenter's active-slide
+    // endpoint may not return a presentation uuid yet, so applySlide
+    // can't load the presentation. Load it here from the focused item
+    // so the slide grid is populated immediately.
+    if (cur && (!cur.type || cur.type === 'presentation')) {
+      const presUuid = cur?.presentation_info?.presentation_uuid || cur?.id?.uuid;
+      const pres = get(currentPresentation);
+      if (presUuid && pres?.uuid !== presUuid) {
+        await loadPresentation(presUuid, itemIdx);
+      }
+    }
   }
 }
 
