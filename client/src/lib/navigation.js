@@ -30,7 +30,10 @@ function parseSlides(data) {
   return slides;
 }
 
-export async function loadPresentation(uuid, itemIndex = null) {
+// slideIndex: which slide to mark as the highlighted/active one. Pass null
+// when loading a presentation that the operator has merely focused (not
+// triggered) so the slide grid renders without any slide highlighted.
+export async function loadPresentation(uuid, itemIndex = null, slideIndex = null) {
   if (!uuid) return false;
   try {
     const data = await api.presentation(uuid);
@@ -40,7 +43,7 @@ export async function loadPresentation(uuid, itemIndex = null) {
       slides: parseSlides(data)
     });
     if (itemIndex !== null) currentItemIndex.set(itemIndex);
-    currentSlideIndex.set(0);
+    currentSlideIndex.set(slideIndex);
     return true;
   } catch (e) {
     status.set({ kind: 'error', message: e.message });

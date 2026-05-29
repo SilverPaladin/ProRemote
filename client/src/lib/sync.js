@@ -22,9 +22,6 @@ let timer = null;
 let inFlight = null;
 let backoffMs = 0;
 let cachedPlaylistId = null;
-// Tracks the last header-row index we auto-skipped past, so a slow poll
-// doesn't fire `next` repeatedly for the same header.
-let lastSkippedHeaderIdx = null;
 const POLL_MS = 700;
 const MAX_BACKOFF = 5000;
 
@@ -41,7 +38,6 @@ export function stopSync() {
   if (inFlight) inFlight.abort();
   inFlight = null;
   backoffMs = 0;
-  lastSkippedHeaderIdx = null;
 }
 
 function schedule(ms) {
@@ -94,17 +90,19 @@ async function applyFocused(focused) {
     currentItemIndex.set(itemIdx);
   }
 
-  // If ProPresenter parked focus on a header row (which has no slides),
-  // auto-advance once so we land on the next real presentation. Guard
-  // against re-firing for the same header on subsequent polls.
+  // Mirror the focused item's presentation in the slide grid, so moving focus
+  // between presentations in ProPresenter updates the slide area immediately —
+  // without waiting for the operator to trigger anything.
   if (typeof itemIdx === 'number') {
     const items = get(currentPlaylistItems) || [];
     const cur = items[itemIdx];
-    if (cur?.type === 'header' && lastSkippedHeaderIdx !== itemIdx) {
-      lastSkippedHeaderIdx = itemIdx;
-      try { await api.next(); } catch { /* surfaced on next poll */ }
-    } else if (cur?.type !== 'header') {
-      lastSkippedHeaderIdx = null;
+    const isPres = !cur?.type || cur.type === 'presentation';
+    if (isPres) {
+      const presUuid = cur?.presentation_info?.presentation_uuid || cur?.id?.uuid;
+      const loaded = get(currentPresentation);
+      if (presUuid && loaded?.uuid !== presUuid) {
+        await loadPresentation(presUuid, itemIdx);
+      }
     }
   }
 }
@@ -114,13 +112,10 @@ async function applySlide(data) {
   const uuid = extractUuid(data);
   const pres = get(currentPresentation);
 
-  // Different presentation became active in ProPresenter — load it.
-  if (uuid && pres?.uuid !== uuid) {
-    const itemIdx = get(currentItemIndex);
-    await loadPresentation(uuid, typeof itemIdx === 'number' ? itemIdx : null);
-    if (idx !== null) currentSlideIndex.set(idx);
-    return;
-  }
+  // Only reflect the active slide highlight when the actively-presenting
+  // presentation matches what the operator currently has focused. Otherwise
+  // leave the slide grid uncoloured — the user is browsing, not presenting.
+  if (!uuid || pres?.uuid !== uuid) return;
 
   if (idx !== null && get(currentSlideIndex) !== idx) {
     currentSlideIndex.set(idx);
