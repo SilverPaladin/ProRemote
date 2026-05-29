@@ -23,7 +23,11 @@
 
   function save() {
     settings.set({ host: host.trim(), port: String(port).trim(), https: !!https });
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
     dispatch('saved');
+    dispatch('close');
   }
 </script>
 
@@ -63,12 +67,6 @@
       <input type="checkbox" bind:checked={https} />
       <span>Use HTTPS</span>
     </label>
-
-    <div class="fs-row">
-      <button type="button" class="fs-btn" on:click={toggleFullscreen}>
-        {isFullscreen ? 'Exit Full Screen' : 'Go Full Screen'}
-      </button>
-    </div>
 
     <div class="hint muted">
       <strong>Note:</strong> if you see CORS errors, enable

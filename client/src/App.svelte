@@ -108,7 +108,6 @@
       {#if $status.kind === 'error'}
         <span class="err" title={$status.message}>⚠ {$status.message}</span>
       {/if}
-      <button on:click={testConnection} title="Reconnect">↻</button>
       <button class="primary" on:click={() => (showSettings = true)}>Settings</button>
     </div>
   </header>
