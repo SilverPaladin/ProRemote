@@ -57,7 +57,7 @@
         <div class="grp" style:--g={slide.groupColor
           ? `rgba(${Math.round((slide.groupColor.red||0)*255)}, ${Math.round((slide.groupColor.green||0)*255)}, ${Math.round((slide.groupColor.blue||0)*255)}, 1)`
           : 'var(--accent)'}>
-          <span class="dot"></span>{slide.groupName}
+          <span class="dot"></span>{slide.groupName} 
         </div>
       {/if}
     </div>

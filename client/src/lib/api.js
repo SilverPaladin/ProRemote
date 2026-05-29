@@ -59,13 +59,11 @@ export const api = {
   activePresentation: () => request('/v1/presentation/active'),
   // Lightweight poll target: returns the currently-presenting slide index
   // (and usually the parent presentation id) without serializing the whole presentation.
-  // Path differs across ProPresenter versions; try the modern path first, then fall back.
   activeSlideIndex: async (signal) => {
     try {
       return await request('/v1/presentation/slide_index', { signal });
     } catch (e) {
       if (e?.name === 'AbortError') throw e;
-      return await request('/v1/presentation/active/slide_index', { signal });
     }
   },
 
