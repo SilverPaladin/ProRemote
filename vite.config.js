@@ -11,7 +11,7 @@ export default defineConfig({
     target: 'es2018'
   },
   server: {
-    port: 5173,
+    port: 8000,
     host: true
   }
 });

@@ -10,8 +10,8 @@
     "serve": "php -S 0.0.0.0:8000 -t public app.php"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^3.1.2",
-    "svelte": "^4.2.19",
-    "vite": "^5.4.10"
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "svelte": "^5.46.4",
+    "vite": "^8.0.14"
   }
 }
