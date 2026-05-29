@@ -40,7 +40,11 @@ export async function loadPresentation(uuid, itemIndex = null, slideIndex = null
     currentPresentation.set({
       uuid,
       name: data?.id?.name || data?.name || 'Presentation',
-      slides: parseSlides(data)
+      slides: parseSlides(data),
+      // Cache-buster for thumbnail URLs — edits made in ProPresenter
+      // (re-ordered/edited slides) reuse the same (uuid, index) so the
+      // browser would otherwise serve stale thumbnails from cache.
+      loadedAt: Date.now()
     });
     if (itemIndex !== null) currentItemIndex.set(itemIndex);
     currentSlideIndex.set(slideIndex);

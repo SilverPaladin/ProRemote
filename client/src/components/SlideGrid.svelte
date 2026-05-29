@@ -6,7 +6,9 @@
 
   function thumb(i) {
     if (!$currentPresentation?.uuid) return '';
-    return api.thumbnailUrl($currentPresentation.uuid, i, 320);
+    const v = $currentPresentation.loadedAt || '';
+    const url = api.thumbnailUrl($currentPresentation.uuid, i, 320);
+    return v ? `${url}&v=${v}` : url;
   }
 
   let gridEl;
@@ -29,7 +31,7 @@
 </script>
 
 <div class="grid scroll" bind:this={gridEl}>
-  {#each ($currentPresentation?.slides || []) as slide, i (slide.uuid || i)}
+  {#each ($currentPresentation?.slides || []) as slide, i (`${$currentPresentation?.uuid}:${slide.uuid || i}`)}
     <div
       class="slide"
       class:active={i === $currentSlideIndex}
